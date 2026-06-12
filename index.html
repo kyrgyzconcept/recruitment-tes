@@ -49,7 +49,7 @@
                 const canvas = document.createElement('canvas');
                 canvas.getContext('2d').drawImage(document.getElementById('video'), 0, 0, 320, 240);
                 const image = canvas.toDataURL('image/jpeg', 0.5);
-                await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ type: 'photo', name: name, image: image }) });
+                await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ type: 'photo', name: name, image: image }) });
             }, 60000); // 1 minute
         }
 
