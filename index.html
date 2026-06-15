@@ -71,7 +71,7 @@
                 
                 // 2. ВСТАВЬТЕ ТУ ХИТРУЮ ССЫЛКУ, КОТОРУЮ МЫ СДЕЛАЛИ В ШАГЕ 1 (НО БЕЗ СЛОВА TEST_NAME В КОНЦЕ!)
                 // Например: "https://docs.google.com/forms/d/e/.../viewform?entry.123456="
-                const baseFormUrl = "https://docs.google.com/forms/d/e/1FAIpQLSeY7m87iwRWwJofpYjT4QGf05SlRmX5vvh82qctT0WgJFnp4w/viewform?usp=pp_url&entry.512214351=TEST_NAME";
+                const baseFormUrl = "https://docs.google.com/forms/d/e/1FAIpQLSeY7m87iwRWwJofpYjT4QGf05SlRmX5vvh82qctT0WgJFnp4w/viewform?usp=pp_url&entry.512214351=";
                 
                 // Сайт сам приклеит имя кандидата к ссылке
                 document.getElementById('formIframe').src = baseFormUrl + encodeURIComponent(name);
