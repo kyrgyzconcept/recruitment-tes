@@ -5,85 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Система тестирования</title>
     <style>
-        /* Сброс стандартных отступов для создания полноэкранного интерфейса */
-        html, body { 
-            margin: 0; 
-            padding: 0; 
-            width: 100%; 
-            height: 100%; 
-            background-color: #f4f7f6; 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            overflow: hidden; /* Запрещаем двойную прокрутку всего экрана */
-        }
-
-        /* Экраны авторизации */
-        .flex-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            width: 100%;
-            height: 100%;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-        .card { 
-            background: white; 
-            padding: 30px; 
-            border-radius: 12px; 
-            max-width: 450px; 
-            width: 100%; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08); 
-            text-align: center;
-            box-sizing: border-box;
-        }
-        h2 { margin-top: 0; color: #2c3e50; }
-        input { width: 100%; padding: 12px; margin: 15px 0; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
-        
-        /* Главная кнопка старта */
+        html, body { margin: 0; padding: 0; width: 100%; height: 100%; background-color: #f4f7f6; font-family: sans-serif; overflow: hidden; }
+        .flex-container { display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; padding: 20px; box-sizing: border-box; }
+        .card { background: white; padding: 30px; border-radius: 12px; max-width: 450px; width: 100%; box-shadow: 0 4px 15px rgba(0,0,0,0.08); text-align: center; }
+        input[type="text"] { width: 100%; padding: 12px; margin: 15px 0; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
         .btn-start { width: 100%; padding: 15px; background: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; }
-
-        /* Рабочая область теста (Полноэкранная) */
-        .workspace {
-            display: flex;
-            flex-direction: column;
-            width: 100%;
-            height: 100%;
-        }
-
-        /* Интеграция Google Формы во весь экран */
-        iframe { 
-            width: 100%; 
-            flex-grow: 1; /* Занимает всё доступное пространство сверху */
-            border: none; 
-            background: #ffffff;
-        }
-
-        /* Нижняя фиксированная панель завершения */
-        .bottom-bar {
-            width: 100%;
-            background: #ffffff;
-            box-shadow: 0 -3px 10px rgba(0,0,0,0.05);
-            padding: 12px 20px;
-            box-sizing: border-box;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        .btn-finish { 
-            max-width: 500px; 
-            width: 100%; 
-            padding: 14px; 
-            background: #28a745; 
-            color: white; 
-            border: none; 
-            border-radius: 6px; 
-            cursor: pointer; 
-            font-size: 16px; 
-            font-weight: bold; 
-            text-align: center;
-            box-shadow: 0 2px 5px rgba(40,167,69,0.2);
-        }
-        .btn-finish:disabled { background: #cccccc; cursor: not-allowed; }
+        .workspace { display: flex; flex-direction: column; width: 100%; height: 100%; }
+        iframe { width: 100%; flex-grow: 1; border: none; background: #ffffff; }
+        
+        .bottom-bar { width: 100%; background: #ffffff; box-shadow: 0 -3px 10px rgba(0,0,0,0.05); padding: 15px 20px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .checkbox-container { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: bold; color: #d9534f; cursor: pointer; }
+        .checkbox-container input { width: 20px; height: 20px; cursor: pointer; }
+        
+        .btn-finish { max-width: 500px; width: 100%; padding: 14px; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; transition: 0.3s; }
+        .btn-finish:disabled { background: #cccccc; cursor: not-allowed; color: #666; }
     </style>
 </head>
 <body>
@@ -91,7 +26,6 @@
     <div class="flex-container" id="setup">
         <div class="card">
             <h2>Регистрация сессии</h2>
-            <p style="color: #666; font-size: 14px;">Пожалуйста, введите ваше имя для начала идентификации и теста.</p>
             <input type="text" id="name" placeholder="Имя и Фамилия">
             <button class="btn-start" onclick="start()">Начать тестирование</button>
         </div>
@@ -100,128 +34,117 @@
     <div class="workspace" id="test" style="display:none;">
         <video id="video" autoplay playsinline style="display:none;"></video>
         
-        <iframe src="https://forms.gle/VUpn9VRWrY6tDDTRA"></iframe>
+        <iframe src="https://forms.gle/GKJ6Cii2RgwdwzrN8"></iframe>
         
         <div class="bottom-bar">
-            <button id="finishBtn" class="btn-finish" onclick="finish()">Я отправил(а) форму. Завершить тест</button>
+            <label class="checkbox-container">
+                <input type="checkbox" id="confirmSubmit" onchange="toggleFinishBtn()">
+                Я подтверждаю, что нажал(а) кнопку «Отправить» внутри формы выше
+            </label>
+            <button id="finishBtn" class="btn-finish" onclick="finish()" disabled>Завершить тест</button>
         </div>
     </div>
 
     <script>
-        // ВСТАВЬТЕ ВАШУ ССЫЛКУ НА APPS SCRIPT НИЖЕ
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxep4nfsEIKDixNG-edxn-EAFEqXjA688uPu45tZZV_sSFKpy__7npQZH75B2GhmXBExw/exec";
+        // ВСТАВЬТЕ ССЫЛКУ НА APPS SCRIPT НИЖЕ
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzLD7Bfba_vzMm6tlm27T_bhAi7R5mrAGe-HhBYCysvoN-oy5EULQTKqKF6qtluuscp7w/exec";
         
         let cheatCount = 0;
         let isTesting = false;
-        let startTime;
+        let startTimestamp;
+        let startTimeFormatted;
         let photoTimer;
 
-        // Трекинг сворачивания окон
         document.addEventListener("visibilitychange", () => {
             if (document.hidden && isTesting) { 
                 cheatCount++; 
-                alert("ВНИМАНИЕ: Вы покинули страницу теста! Это действие зафиксировано системой прокторинга."); 
+                alert("ВНИМАНИЕ: Вы покинули страницу! Это нарушение зафиксировано."); 
             }
         });
 
+        // Управление разблокировкой кнопки
+        function toggleFinishBtn() {
+            const checkbox = document.getElementById('confirmSubmit');
+            const btn = document.getElementById('finishBtn');
+            btn.disabled = !checkbox.checked;
+        }
+
         async function start() {
             const name = document.getElementById('name').value.trim();
-            if(!name) return alert("Пожалуйста, введите ваше имя.");
+            if(!name) return alert("Пожалуйста, введите имя.");
             
             try {
-                // Запрашиваем камеру в высоком разрешении (HD), чтобы избежать размытия
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { 
-                        width: { ideal: 1280 }, 
-                        height: { ideal: 720 },
-                        facingMode: "user" 
-                    } 
-                });
-                
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" } });
                 document.getElementById('video').srcObject = stream;
                 
-                // Переключаем интерфейс в полноэкранный режим
                 document.getElementById('setup').style.display = 'none';
                 document.getElementById('test').style.display = 'flex';
                 
                 isTesting = true;
-                startTime = Date.now();
+                startTimestamp = Date.now();
+                
+                // Формируем красивое время старта (например, 14:30:00)
+                let now = new Date();
+                startTimeFormatted = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+                
+                // Делаем первый снимок мгновенно, чтобы в таблице сразу появилась строка
+                sendPhoto(name);
                 scheduleNextPhoto(name);
                 
             } catch (err) {
-                alert("Ошибка доступа к камере. Для прохождения теста необходимо предоставить доступ к веб-камере.");
+                alert("Разрешите доступ к камере для тестирования.");
             }
         }
 
-        // Рандомизированный таймер снимков (от 45 до 90 секунд)
+        async function sendPhoto(name) {
+            const video = document.getElementById('video');
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth || 640;
+                canvas.height = video.videoHeight || 480;
+                canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+                const image = canvas.toDataURL('image/jpeg', 0.75);
+                
+                await fetch(SCRIPT_URL, { 
+                    method: 'POST', 
+                    mode: 'no-cors', 
+                    body: JSON.stringify({ type: 'photo', name: name, image: image, startTime: startTimeFormatted }) 
+                });
+            } catch(e) {}
+        }
+
         function scheduleNextPhoto(name) {
             if (!isTesting) return;
-            
             let randomDelay = Math.floor(Math.random() * (90000 - 45000 + 1)) + 45000;
-            
-            photoTimer = setTimeout(async () => {
+            photoTimer = setTimeout(() => {
                 if (!isTesting) return; 
-                
-                const video = document.getElementById('video');
-                try {
-                    const canvas = document.createElement('canvas');
-                    
-                    // Динамически подстраиваем размер холста под реальные пропорции камеры устройства (убирает кроп/сплющивание)
-                    canvas.width = video.videoWidth || 640;
-                    canvas.height = video.videoHeight || 480;
-                    
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    
-                    // Повышаем качество сжатия до 0.75 для четкости лиц
-                    const image = canvas.toDataURL('image/jpeg', 0.75);
-                    
-                    await fetch(SCRIPT_URL, { 
-                        method: 'POST', 
-                        mode: 'no-cors', 
-                        body: JSON.stringify({ type: 'photo', name: name, image: image }) 
-                    });
-                } catch(e) {
-                    console.log("Ошибка отправки кадра");
-                }
-                
+                sendPhoto(name);
                 scheduleNextPhoto(name);
             }, randomDelay);
         }
 
-        // Фиксация окончания
         async function finish() {
             isTesting = false; 
             clearTimeout(photoTimer);
             
             const video = document.getElementById('video');
-            if(video.srcObject) {
-                video.srcObject.getTracks().forEach(track => track.stop());
-            }
+            if(video.srcObject) video.srcObject.getTracks().forEach(track => track.stop());
 
-            let totalSeconds = Math.floor((Date.now() - startTime) / 1000);
-            let minutes = Math.floor(totalSeconds / 60);
-            let seconds = totalSeconds % 60;
-            let timeString = `${minutes} мин ${seconds} сек`;
+            let totalSeconds = Math.floor((Date.now() - startTimestamp) / 1000);
+            let timeString = `${Math.floor(totalSeconds / 60)} мин ${totalSeconds % 60} сек`;
 
             const name = document.getElementById('name').value;
             const btn = document.getElementById('finishBtn');
-            btn.innerText = "Сохранение сессии...";
+            btn.innerText = "Сохранение...";
             btn.disabled = true;
 
             await fetch(SCRIPT_URL, { 
                 method: 'POST', 
                 mode: 'no-cors', 
-                body: JSON.stringify({ 
-                    type: 'result', 
-                    name: name, 
-                    time: timeString, 
-                    cheats: cheatCount 
-                }) 
+                body: JSON.stringify({ type: 'result', name: name, startTime: startTimeFormatted, time: timeString, cheats: cheatCount }) 
             });
 
-            // Полная конфиденциальность: кандидат видит только стандартное спасибо
-            alert("Ваши ответы и данные прокторинга успешно сохранены. Спасибо за прохождение тестирования!");
+            alert("Тест завершен. Ваши данные сохранены!");
             location.reload();
         }
     </script>
