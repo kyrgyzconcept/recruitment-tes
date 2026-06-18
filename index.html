@@ -8,20 +8,23 @@
         body { font-family: Arial, sans-serif; background-color: #f4f7f6; display: flex; flex-direction: column; height: 100vh; margin: 0; overflow: hidden; }
         .container { background: #fff; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; margin: auto; }
         h2 { color: #333; margin-bottom: 20px; }
-        input { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; }
+        input[type="text"], input[type="tel"], input[type="email"] { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; }
         
         /* Кнопки */
         .btn-start { background: #007bff; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 15px; }
         .btn-start:hover { background: #0056b3; }
-        .btn-finish { background: #28a745; color: white; border: none; padding: 12px 30px; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .btn-finish { background: #28a745; color: white; border: none; padding: 12px 30px; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); margin-top: 10px; }
         .btn-finish:hover { background: #218838; }
+        .btn-finish:disabled { background: #6c757d; cursor: not-allowed; box-shadow: none; }
 
         /* Ифрейм рабочего пространства */
         #workspace { display: none; flex-direction: column; width: 100vw; height: 100vh; }
         #test-frame { flex-grow: 1; width: 100%; border: none; }
         
         /* Нижняя панель */
-        .bottom-bar { height: 60px; background: #222; display: flex; justify-content: center; align-items: center; width: 100%; color: #fff; }
+        .bottom-bar { padding: 15px; background: #222; display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; color: #fff; box-sizing: border-box; }
+        .checkbox-container { display: flex; align-items: center; gap: 10px; font-size: 15px; cursor: pointer; }
+        .checkbox-container input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; margin: 0; }
         
         video { display: none; }
         #thanks-screen { display: none; text-align: center; margin: auto; }
@@ -43,7 +46,11 @@
     <div id="workspace">
         <iframe id="test-frame"></iframe>
         <div class="bottom-bar">
-            <button class="btn-finish" onclick="finishTestManual()">Я отправил форму, завершить тестирование</button>
+            <label class="checkbox-container">
+                <input type="checkbox" id="confirm-submit" onchange="toggleFinishButton()">
+                Я подтверждаю, что нажал(а) кнопку «Отправить» в Google Форме
+            </label>
+            <button class="btn-finish" id="finish-btn" onclick="finishTestManual()" disabled>Завершить тестирование</button>
         </div>
     </div>
 
@@ -57,11 +64,14 @@
 
     <script>
         // =================================================================
-        // НАСТРОЙКА ССЫЛОК (ЗАПОЛНИТЕ СВОИМИ ДАННЫМИ)
-        // =================================================================
-        const APP_SCRIPT_URL = "Вhttps://script.google.com/macros/s/AKfycbzLD7Bfba_vzMm6tlm27T_bhAi7R5mrAGe-HhBYCysvoN-oy5EULQTKqKF6qtluuscp7w/exec"; 
-        const FORM_BASE_URL = "https://forms.gle/M1Y6GkHuiHe1YCNd7"; // Строго до знака вопроса!
-        const EMAIL_ENTRY_ID = "entry.512214351"; // Только entry.и_цифры
+        // ОШИБКА БЫЛА ЗДЕСЬ: убрана лишняя буква "В" в начале ссылки
+        const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzLD7Bfba_vzMm6tlm27T_bhAi7R5mrAGe-HhBYCysvoN-oy5EULQTKqKF6qtluuscp7w/exec"; 
+        
+        // ВАЖНО: Вставьте сюда ДЛИННУЮ ссылку. forms.gle работать НЕ БУДЕТ!
+        // Пример: "https://docs.google.com/forms/d/e/ВАШ_ДЛИННЫЙ_ИДЕНТИФИКАТОР/viewform"
+        const FORM_BASE_URL = "https://docs.google.com/forms/d/e/1FAIpQLSeY7m87iwRWwJofpYjT4QGf05SlRmX5vvh82qctT0WgJFnp4w/viewform"; 
+        
+        const EMAIL_ENTRY_ID = "entry.512214351"; 
         // =================================================================
 
         let candidateData = {};
@@ -71,6 +81,13 @@
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const context = canvas.getContext('2d');
+
+        // Управление доступностью кнопки финиша
+        function toggleFinishButton() {
+            const checkbox = document.getElementById('confirm-submit');
+            const btn = document.getElementById('finish-btn');
+            btn.disabled = !checkbox.checked;
+        }
 
         async function startTest() {
             candidateData = {
@@ -100,7 +117,6 @@
                 candidateData.startTime = now.toLocaleString("ru-RU");
                 candidateData.startMs = now.getTime();
 
-                // Первичный сигнал
                 sendDataToServer({
                     type: "result",
                     name: candidateData.name,
@@ -116,18 +132,14 @@
                 timerInterval = setInterval(updateTimeAndSend, 60000); 
                 scheduleNextPhoto();
 
-                // Отслеживание ухода со страницы (МГНОВЕННОЕ ДО ALERT)
                 document.addEventListener('visibilitychange', () => {
                     if (document.hidden) {
                         cheatCount++;
-                        // Сначала шлем данные на сервер скрытно, чтобы они точно ушли live
                         updateTimeAndSend();
-                        // Потом прерываем интерфейс алертом
                         alert("Внимание! Покидать вкладку тестирования запрещено. Нарушение зафиксировано.");
                     }
                 });
 
-                // Трекер закрытия вкладки (Аварийный сигнал)
                 window.addEventListener('pagehide', () => {
                     const payload = JSON.stringify({ type: "close", email: candidateData.email });
                     navigator.sendBeacon(APP_SCRIPT_URL, payload);
@@ -176,7 +188,7 @@
         }
 
         function finishTestManual() {
-            if(!confirm("Вы уверены, что отправили Google форму и хотите завершить тест? Камера будет отключена.")) return;
+            if(!confirm("Вы уверены, что хотите завершить тест? Камера будет отключена.")) return;
             
             clearInterval(timerInterval);
             clearTimeout(photoInterval);
@@ -188,7 +200,6 @@
             let currentMs = new Date().getTime();
             let minutesPassed = Math.floor((currentMs - candidateData.startMs) / 60000);
 
-            // Финальный синхронный пинг завершения
             sendDataToServer({
                 type: "final_click",
                 email: candidateData.email,
