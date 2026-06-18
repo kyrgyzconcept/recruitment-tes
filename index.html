@@ -2,130 +2,166 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Система тестирования</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Онлайн-тестирование</title>
     <style>
-        html, body { margin: 0; padding: 0; width: 100%; height: 100%; background-color: #f4f7f6; font-family: sans-serif; overflow: hidden; }
-        .flex-container { display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; padding: 20px; box-sizing: border-box; }
-        .card { background: white; padding: 30px; border-radius: 12px; max-width: 450px; width: 100%; box-shadow: 0 4px 15px rgba(0,0,0,0.08); text-align: center; }
-        input[type="text"] { width: 100%; padding: 12px; margin: 15px 0; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
-        .btn-start { width: 100%; padding: 15px; background: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; }
-        .workspace { display: flex; flex-direction: column; width: 100%; height: 100%; }
-        iframe { width: 100%; flex-grow: 1; border: none; background: #ffffff; }
-        .bottom-bar { width: 100%; background: #ffffff; box-shadow: 0 -3px 10px rgba(0,0,0,0.05); padding: 15px 20px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 10px; }
-        .checkbox-container { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: bold; color: #d9534f; cursor: pointer; }
-        .checkbox-container input { width: 20px; height: 20px; cursor: pointer; }
-        .btn-finish { max-width: 500px; width: 100%; padding: 14px; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; transition: 0.3s; }
-        .btn-finish:disabled { background: #cccccc; cursor: not-allowed; color: #666; }
+        body { font-family: Arial, sans-serif; background-color: #f4f7f6; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .container { background: #fff; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
+        h2 { color: #333; margin-bottom: 20px; }
+        input { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; }
+        button { background: #007bff; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 15px; }
+        button:hover { background: #0056b3; }
+        #test-frame { display: none; width: 100vw; height: 100vh; border: none; }
+        video { display: none; }
     </style>
 </head>
 <body>
 
-    <div class="flex-container" id="setup">
-        <div class="card">
-            <h2>Регистрация</h2>
-            <input type="text" id="name" placeholder="Введите ваше Имя и Фамилию">
-            <button class="btn-start" onclick="start()">Начать тестирование</button>
-        </div>
+    <div class="container" id="reg-screen">
+        <h2>Регистрация кандидата</h2>
+        <p style="font-size: 14px; color: #666;">Пожалуйста, заполните данные перед началом теста. Убедитесь, что камера не закрыта.</p>
+        <input type="text" id="cand-name" placeholder="Имя" required>
+        <input type="text" id="cand-surname" placeholder="Фамилия" required>
+        <input type="tel" id="cand-phone" placeholder="Номер телефона" required>
+        <input type="email" id="cand-email" placeholder="Email" required>
+        <input type="text" id="cand-position" placeholder="Должность" required>
+        <button onclick="startTest()">Начать тестирование</button>
     </div>
 
-    <div class="workspace" id="test" style="display:none;">
-        <video id="video" autoplay playsinline style="display:none;"></video>
-        
-        <iframe id="formIframe"></iframe>
-        
-        <div class="bottom-bar">
-            <label class="checkbox-container">
-                <input type="checkbox" id="confirmSubmit" onchange="toggleFinishBtn()">
-                Я подтверждаю, что нажал(а) кнопку «Отправить» внутри формы
-            </label>
-            <button id="finishBtn" class="btn-finish" onclick="finish()" disabled>Завершить тест</button>
-        </div>
-    </div>
+    <iframe id="test-frame"></iframe>
+    <video id="video" autoplay playsinline></video>
+    <canvas id="canvas" style="display:none;"></canvas>
 
     <script>
-        // 1. ВСТАВЬТЕ ВАШУ ССЫЛКУ ИЗ APPS SCRIPT МЕЖДУ КАВЫЧКАМИ
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzLD7Bfba_vzMm6tlm27T_bhAi7R5mrAGe-HhBYCysvoN-oy5EULQTKqKF6qtluuscp7w/exec";
+        // =================================================================
+        // ВСТАВЬТЕ СЮДА ВАШИ ССЫЛКИ И ID
+        // =================================================================
+        const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzLD7Bfba_vzMm6tlm27T_bhAi7R5mrAGe-HhBYCysvoN-oy5EULQTKqKF6qtluuscp7w/exec"; 
         
+        // Вставьте базовую ссылку на форму ДО знака вопроса (заканчивается на /viewform)
+        const FORM_BASE_URL = "https://forms.gle/u1hN3tHiMGE49MnJA";
+        
+        // Вставьте тот самый entry ID для поля Email (например: entry.123456789)
+        const EMAIL_ENTRY_ID = "entry.512214351"; 
+        // =================================================================
+
+
+        let candidateData = {};
+        let startTime, timerInterval, photoInterval;
         let cheatCount = 0;
-        let isTesting = false;
-        let startTimestamp;
-        let startTimeFormatted;
-        let photoTimer;
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
 
-        document.addEventListener("visibilitychange", () => {
-            if (document.hidden && isTesting) { cheatCount++; alert("ВНИМАНИЕ: Вы свернули тест!"); }
-        });
+        async function startTest() {
+            candidateData = {
+                name: document.getElementById('cand-name').value.trim(),
+                surname: document.getElementById('cand-surname').value.trim(),
+                phone: document.getElementById('cand-phone').value.trim(),
+                email: document.getElementById('cand-email').value.trim(),
+                position: document.getElementById('cand-position').value.trim()
+            };
 
-        function toggleFinishBtn() {
-            document.getElementById('finishBtn').disabled = !document.getElementById('confirmSubmit').checked;
-        }
+            if (!candidateData.name || !candidateData.surname || !candidateData.email) {
+                alert("Пожалуйста, заполните Имя, Фамилию и Email.");
+                return;
+            }
 
-        async function start() {
-            const name = document.getElementById('name').value.trim();
-            if(!name) return alert("Пожалуйста, введите имя.");
-            
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" } });
-                document.getElementById('video').srcObject = stream;
+                // Запрос к камере
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
                 
-                // 2. ВСТАВЬТЕ ТУ ХИТРУЮ ССЫЛКУ, КОТОРУЮ МЫ СДЕЛАЛИ В ШАГЕ 1 (НО БЕЗ СЛОВА TEST_NAME В КОНЦЕ!)
-                // Например: "https://docs.google.com/forms/d/e/.../viewform?entry.123456="
-                const baseFormUrl = "https://docs.google.com/forms/d/e/1FAIpQLSeY7m87iwRWwJofpYjT4QGf05SlRmX5vvh82qctT0WgJFnp4w/viewform?usp=pp_url&entry.512214351=";
+                // Переключение экранов
+                document.getElementById('reg-screen').style.display = 'none';
+                const iframe = document.getElementById('test-frame');
+                iframe.style.display = 'block';
+                document.body.style.margin = "0"; // Убираем отступы
                 
-                // Сайт сам приклеит имя кандидата к ссылке
-                document.getElementById('formIframe').src = baseFormUrl + encodeURIComponent(name);
-                
-                document.getElementById('setup').style.display = 'none';
-                document.getElementById('test').style.display = 'flex';
-                
-                isTesting = true;
-                startTimestamp = Date.now();
+                // Формируем предзаполненную ссылку на форму
+                iframe.src = `${FORM_BASE_URL}?${EMAIL_ENTRY_ID}=${encodeURIComponent(candidateData.email)}`;
+
+                // Фиксируем время начала
                 let now = new Date();
-                startTimeFormatted = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
-                
-                // Ждем 2 секунды, чтобы камера включилась (исправляет черные фото)
-                setTimeout(() => {
-                    if (isTesting) { sendPhoto(name); scheduleNextPhoto(name); }
-                }, 2000);
-                
+                candidateData.startTime = now.toLocaleString("ru-RU");
+                candidateData.startMs = now.getTime();
+
+                // Отправляем первичные данные на сервер
+                sendDataToServer({
+                    type: "photo", // Отправляем пустую стартовую карточку
+                    name: candidateData.name,
+                    surname: candidateData.surname,
+                    phone: candidateData.phone,
+                    email: candidateData.email,
+                    position: candidateData.position,
+                    startTime: candidateData.startTime,
+                    image: "" // Без фото для первого пинга
+                });
+
+                // Включаем таймер (каждую минуту обновляем финальный результат)
+                timerInterval = setInterval(updateTimeAndSend, 60000); 
+
+                // Включаем случайные фото (каждые 3-5 минут)
+                scheduleNextPhoto();
+
+                // Отслеживаем переключение вкладок (читинг)
+                document.addEventListener('visibilitychange', () => {
+                    if (document.hidden) {
+                        cheatCount++;
+                        alert("Внимание! Покидать вкладку тестирования запрещено. Нарушение зафиксировано.");
+                        updateTimeAndSend(); // Сразу отправляем обновленный счетчик нарушений
+                    }
+                });
+
             } catch (err) {
-                alert("Разрешите доступ к камере.");
+                alert("Для прохождения теста необходимо разрешить доступ к камере.");
             }
         }
 
-        async function sendPhoto(name) {
-            const video = document.getElementById('video');
-            try {
-                const canvas = document.createElement('canvas');
-                canvas.width = video.videoWidth || 640;
-                canvas.height = video.videoHeight || 480;
-                canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-                const image = canvas.toDataURL('image/jpeg', 0.75);
-                
-                await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ type: 'photo', name: name, image: image, startTime: startTimeFormatted }) });
-            } catch(e) {}
+        function scheduleNextPhoto() {
+            // Случайный интервал от 3 до 5 минут
+            const randomTime = Math.floor(Math.random() * (300000 - 180000 + 1)) + 180000;
+            photoInterval = setTimeout(() => {
+                takeAndSendPhoto();
+                scheduleNextPhoto(); // Запускаем цикл заново
+            }, randomTime);
         }
 
-        function scheduleNextPhoto(name) {
-            if (!isTesting) return;
-            let randomDelay = Math.floor(Math.random() * (90000 - 45000 + 1)) + 45000;
-            photoTimer = setTimeout(() => { if (isTesting) { sendPhoto(name); scheduleNextPhoto(name); } }, randomDelay);
+        function takeAndSendPhoto() {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imageData = canvas.toDataURL('image/jpeg', 0.6); // Сжимаем до 60%
+
+            sendDataToServer({
+                type: "photo",
+                name: candidateData.name,
+                surname: candidateData.surname,
+                email: candidateData.email,
+                image: imageData
+            });
         }
 
-        async function finish() {
-            isTesting = false; clearTimeout(photoTimer);
-            const video = document.getElementById('video');
-            if(video.srcObject) video.srcObject.getTracks().forEach(track => track.stop());
+        function updateTimeAndSend() {
+            let currentMs = new Date().getTime();
+            let minutesPassed = Math.floor((currentMs - candidateData.startMs) / 60000);
 
-            let totalSeconds = Math.floor((Date.now() - startTimestamp) / 1000);
-            let timeString = `${Math.floor(totalSeconds / 60)} мин ${totalSeconds % 60} сек`;
-            const name = document.getElementById('name').value;
-            const btn = document.getElementById('finishBtn');
-            btn.innerText = "Сохранение..."; btn.disabled = true;
+            sendDataToServer({
+                type: "result",
+                email: candidateData.email,
+                startTime: candidateData.startTime,
+                time: minutesPassed,
+                cheats: cheatCount
+            });
+        }
 
-            await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ type: 'result', name: name, startTime: startTimeFormatted, time: timeString, cheats: cheatCount }) });
-            alert("Тест завершен!"); location.reload();
+        function sendDataToServer(dataObj) {
+            fetch(APP_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(dataObj)
+            }).catch(e => console.error(e));
         }
     </script>
 </body>
