@@ -5,27 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Онлайн-тестирование</title>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f7f6; display: flex; flex-direction: column; height: 100vh; margin: 0; overflow: hidden; }
-        .container { background: #fff; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; margin: auto; }
-        h2 { color: #66fcff; margin-bottom: 20px; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f8f9fa; display: flex; flex-direction: column; height: 100vh; margin: 0; overflow: hidden; }
+        .container { background: #fff; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; margin: auto; border-top: 5px solid #64b5f6; }
+        h2 { color: #1e88e5; margin-bottom: 20px; }
         input[type="text"], input[type="tel"], input[type="email"] { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; }
-        
+
         /* Кнопки */
-        .btn-start { background: #007bff; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 15px; }
-        .btn-start:hover { background: #0056b3; }
-        .btn-finish { background: #28a745; color: white; border: none; padding: 12px 30px; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); margin-top: 10px; }
-        .btn-finish:hover { background: #218838; }
+        .btn-start { background: #64b5f6; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 15px; }
+        .btn-start:hover { background: #42a5f5; }
+        .btn-finish { background: #43a047; color: white; border: none; padding: 12px 30px; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); margin-top: 10px; }
+        .btn-finish:hover { background: #2e7d32; }
         .btn-finish:disabled { background: #6c757d; cursor: not-allowed; box-shadow: none; }
 
         /* Ифрейм рабочего пространства */
         #workspace { display: none; flex-direction: column; width: 100vw; height: 100vh; }
         #test-frame { flex-grow: 1; width: 100%; border: none; }
-        
+
         /* Нижняя панель */
-        .bottom-bar { padding: 15px; background: #222; display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; color: #fff; box-sizing: border-box; }
+        .bottom-bar { padding: 15px; background: #2f3a40; display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; color: #fff; box-sizing: border-box; gap: 10px; }
         .checkbox-container { display: flex; align-items: center; gap: 10px; font-size: 15px; cursor: pointer; }
         .checkbox-container input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; margin: 0; }
-        
+
+        .status-line {
+            font-size: 14px;
+            color: #dff3ff;
+        }
+
         video { display: none; }
         #thanks-screen { display: none; text-align: center; margin: auto; }
     </style>
@@ -46,6 +51,7 @@
     <div id="workspace">
         <iframe id="test-frame"></iframe>
         <div class="bottom-bar">
+            <div class="status-line" id="status-line">Ждем ответа...</div>
             <label class="checkbox-container">
                 <input type="checkbox" id="confirm-submit" onchange="toggleFinishButton()">
                 Я подтверждаю, что нажал(а) кнопку «Отправить» в Google Форме
@@ -65,13 +71,13 @@
     <script>
         // =================================================================
         // ОШИБКА БЫЛА ЗДЕСЬ: убрана лишняя буква "В" в начале ссылки
-        const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzLD7Bfba_vzMm6tlm27T_bhAi7R5mrAGe-HhBYCysvoN-oy5EULQTKqKF6qtluuscp7w/exec"; 
-        
+        const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzLD7Bfba_vzMm6tlm27T_bhAi7R5mrAGe-HhBYCysvoN-oy5EULQTKqKF6qtluuscp7w/exec";
+
         // ВАЖНО: Вставьте сюда ДЛИННУЮ ссылку. forms.gle работать НЕ БУДЕТ!
         // Пример: "https://docs.google.com/forms/d/e/ВАШ_ДЛИННЫЙ_ИДЕНТИФИКАТОР/viewform"
-        const FORM_BASE_URL = "https://docs.google.com/forms/d/e/1FAIpQLSeY7m87iwRWwJofpYjT4QGf05SlRmX5vvh82qctT0WgJFnp4w/viewform"; 
-        
-        const EMAIL_ENTRY_ID = "entry.512214351"; 
+        const FORM_BASE_URL = "https://docs.google.com/forms/d/e/1FAIpQLSeY7m87iwRWwJofpYjT4QGf05SlRmX5vvh82qctT0WgJFnp4w/viewform";
+
+        const EMAIL_ENTRY_ID = "entry.512214351";
         // =================================================================
 
         let candidateData = {};
@@ -87,6 +93,11 @@
             const checkbox = document.getElementById('confirm-submit');
             const btn = document.getElementById('finish-btn');
             btn.disabled = !checkbox.checked;
+        }
+
+        function setStatus(text) {
+            const statusLine = document.getElementById('status-line');
+            if (statusLine) statusLine.textContent = text;
         }
 
         async function startTest() {
@@ -106,16 +117,18 @@
             try {
                 streamInstance = await navigator.mediaDevices.getUserMedia({ video: true });
                 video.srcObject = streamInstance;
-                
+
                 document.getElementById('reg-screen').style.display = 'none';
                 document.getElementById('workspace').style.display = 'flex';
-                
+
                 const iframe = document.getElementById('test-frame');
                 iframe.src = `${FORM_BASE_URL}?${EMAIL_ENTRY_ID}=${encodeURIComponent(candidateData.email)}`;
 
                 let now = new Date();
                 candidateData.startTime = now.toLocaleString("ru-RU");
                 candidateData.startMs = now.getTime();
+
+                setStatus("Ждем ответа...");
 
                 sendDataToServer({
                     type: "result",
@@ -129,7 +142,7 @@
                     cheats: 0
                 });
 
-                timerInterval = setInterval(updateTimeAndSend, 60000); 
+                timerInterval = setInterval(updateTimeAndSend, 60000);
                 scheduleNextPhoto();
 
                 document.addEventListener('visibilitychange', () => {
@@ -189,10 +202,10 @@
 
         function finishTestManual() {
             if(!confirm("Вы уверены, что хотите завершить тест? Камера будет отключена.")) return;
-            
+
             clearInterval(timerInterval);
             clearTimeout(photoInterval);
-            
+
             if (streamInstance) {
                 streamInstance.getTracks().forEach(track => track.stop());
             }
