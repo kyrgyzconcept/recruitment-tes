@@ -5,50 +5,69 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Онлайн-тестирование</title>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f7f6; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .container { background: #fff; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
+        body { font-family: Arial, sans-serif; background-color: #f4f7f6; display: flex; flex-direction: column; height: 100vh; margin: 0; overflow: hidden; }
+        .container { background: #fff; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; margin: auto; }
         h2 { color: #333; margin-bottom: 20px; }
         input { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; }
-        button { background: #007bff; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 15px; }
-        button:hover { background: #0056b3; }
-        #test-frame { display: none; width: 100vw; height: 100vh; border: none; }
+        
+        /* Кнопки */
+        .btn-start { background: #007bff; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 15px; }
+        .btn-start:hover { background: #0056b3; }
+        .btn-finish { background: #28a745; color: white; border: none; padding: 12px 30px; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .btn-finish:hover { background: #218838; }
+
+        /* Ифрейм рабочего пространства */
+        #workspace { display: none; flex-direction: column; width: 100vw; height: 100vh; }
+        #test-frame { flex-grow: 1; width: 100%; border: none; }
+        
+        /* Нижняя панель */
+        .bottom-bar { height: 60px; background: #222; display: flex; justify-content: center; align-items: center; width: 100%; color: #fff; }
+        
         video { display: none; }
+        #thanks-screen { display: none; text-align: center; margin: auto; }
     </style>
 </head>
 <body>
 
     <div class="container" id="reg-screen">
         <h2>Регистрация кандидата</h2>
-        <p style="font-size: 14px; color: #666;">Пожалуйста, заполните данные перед началом теста. Убедитесь, что камера не закрыта.</p>
+        <p style="font-size: 14px; color: #666;">Пожалуйста, заполните данные перед началом теста. Убедитесь, что камера работает.</p>
         <input type="text" id="cand-name" placeholder="Имя" required>
         <input type="text" id="cand-surname" placeholder="Фамилия" required>
         <input type="tel" id="cand-phone" placeholder="Номер телефона" required>
         <input type="email" id="cand-email" placeholder="Email" required>
         <input type="text" id="cand-position" placeholder="Должность" required>
-        <button onclick="startTest()">Начать тестирование</button>
+        <button class="btn-start" onclick="startTest()">Начать тестирование</button>
     </div>
 
-    <iframe id="test-frame"></iframe>
+    <div id="workspace">
+        <iframe id="test-frame"></iframe>
+        <div class="bottom-bar">
+            <button class="btn-finish" onclick="finishTestManual()">Я отправил форму, завершить тестирование</button>
+        </div>
+    </div>
+
+    <div class="container" id="thanks-screen">
+        <h2>Тестирование успешно завершено!</h2>
+        <p>Спасибо, ваши ответы и результаты сохранены. Вы можете закрыть эту вкладку.</p>
+    </div>
+
     <video id="video" autoplay playsinline></video>
     <canvas id="canvas" style="display:none;"></canvas>
 
     <script>
         // =================================================================
-        // ВСТАВЬТЕ СЮДА ВАШИ ССЫЛКИ И ID
+        // НАСТРОЙКА ССЫЛОК (ЗАПОЛНИТЕ СВОИМИ ДАННЫМИ)
         // =================================================================
-        const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzLD7Bfba_vzMm6tlm27T_bhAi7R5mrAGe-HhBYCysvoN-oy5EULQTKqKF6qtluuscp7w/exec"; 
-        
-        // Вставьте базовую ссылку на форму ДО знака вопроса (заканчивается на /viewform)
-        const FORM_BASE_URL = "https://forms.gle/u1hN3tHiMGE49MnJA";
-        
-        // Вставьте тот самый entry ID для поля Email (например: entry.123456789)
-        const EMAIL_ENTRY_ID = "entry.512214351"; 
+        const APP_SCRIPT_URL = "Вhttps://script.google.com/macros/s/AKfycbzLD7Bfba_vzMm6tlm27T_bhAi7R5mrAGe-HhBYCysvoN-oy5EULQTKqKF6qtluuscp7w/exec"; 
+        const FORM_BASE_URL = "https://forms.gle/M1Y6GkHuiHe1YCNd7"; // Строго до знака вопроса!
+        const EMAIL_ENTRY_ID = "entry.512214351"; // Только entry.и_цифры
         // =================================================================
-
 
         let candidateData = {};
         let startTime, timerInterval, photoInterval;
         let cheatCount = 0;
+        let streamInstance = null;
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const context = canvas.getContext('2d');
@@ -68,70 +87,71 @@
             }
 
             try {
-                // Запрос к камере
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                video.srcObject = stream;
+                streamInstance = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = streamInstance;
                 
-                // Переключение экранов
                 document.getElementById('reg-screen').style.display = 'none';
-                const iframe = document.getElementById('test-frame');
-                iframe.style.display = 'block';
-                document.body.style.margin = "0"; // Убираем отступы
+                document.getElementById('workspace').style.display = 'flex';
                 
-                // Формируем предзаполненную ссылку на форму
+                const iframe = document.getElementById('test-frame');
                 iframe.src = `${FORM_BASE_URL}?${EMAIL_ENTRY_ID}=${encodeURIComponent(candidateData.email)}`;
 
-                // Фиксируем время начала
                 let now = new Date();
                 candidateData.startTime = now.toLocaleString("ru-RU");
                 candidateData.startMs = now.getTime();
 
-                // Отправляем первичные данные на сервер
+                // Первичный сигнал
                 sendDataToServer({
-                    type: "photo", // Отправляем пустую стартовую карточку
+                    type: "result",
                     name: candidateData.name,
                     surname: candidateData.surname,
                     phone: candidateData.phone,
                     email: candidateData.email,
                     position: candidateData.position,
                     startTime: candidateData.startTime,
-                    image: "" // Без фото для первого пинга
+                    time: 0,
+                    cheats: 0
                 });
 
-                // Включаем таймер (каждую минуту обновляем финальный результат)
                 timerInterval = setInterval(updateTimeAndSend, 60000); 
-
-                // Включаем случайные фото (каждые 3-5 минут)
                 scheduleNextPhoto();
 
-                // Отслеживаем переключение вкладок (читинг)
+                // Отслеживание ухода со страницы (МГНОВЕННОЕ ДО ALERT)
                 document.addEventListener('visibilitychange', () => {
                     if (document.hidden) {
                         cheatCount++;
+                        // Сначала шлем данные на сервер скрытно, чтобы они точно ушли live
+                        updateTimeAndSend();
+                        // Потом прерываем интерфейс алертом
                         alert("Внимание! Покидать вкладку тестирования запрещено. Нарушение зафиксировано.");
-                        updateTimeAndSend(); // Сразу отправляем обновленный счетчик нарушений
                     }
                 });
 
+                // Трекер закрытия вкладки (Аварийный сигнал)
+                window.addEventListener('pagehide', () => {
+                    const payload = JSON.stringify({ type: "close", email: candidateData.email });
+                    navigator.sendBeacon(APP_SCRIPT_URL, payload);
+                });
+
             } catch (err) {
-                alert("Для прохождения теста необходимо разрешить доступ к камере.");
+                alert("Для прохождения теста необходим доступ к камере.");
             }
         }
 
         function scheduleNextPhoto() {
-            // Случайный интервал от 3 до 5 минут
             const randomTime = Math.floor(Math.random() * (300000 - 180000 + 1)) + 180000;
             photoInterval = setTimeout(() => {
                 takeAndSendPhoto();
-                scheduleNextPhoto(); // Запускаем цикл заново
+                scheduleNextPhoto();
             }, randomTime);
         }
 
         function takeAndSendPhoto() {
+            if (!streamInstance) return;
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const imageData = canvas.toDataURL('image/jpeg', 0.6); // Сжимаем до 60%
+            const imageData = canvas.toDataURL('image/jpeg', 0.5);
 
             sendDataToServer({
                 type: "photo",
@@ -153,6 +173,32 @@
                 time: minutesPassed,
                 cheats: cheatCount
             });
+        }
+
+        function finishTestManual() {
+            if(!confirm("Вы уверены, что отправили Google форму и хотите завершить тест? Камера будет отключена.")) return;
+            
+            clearInterval(timerInterval);
+            clearTimeout(photoInterval);
+            
+            if (streamInstance) {
+                streamInstance.getTracks().forEach(track => track.stop());
+            }
+
+            let currentMs = new Date().getTime();
+            let minutesPassed = Math.floor((currentMs - candidateData.startMs) / 60000);
+
+            // Финальный синхронный пинг завершения
+            sendDataToServer({
+                type: "final_click",
+                email: candidateData.email,
+                startTime: candidateData.startTime,
+                time: minutesPassed,
+                cheats: cheatCount
+            });
+
+            document.getElementById('workspace').style.display = 'none';
+            document.getElementById('thanks-screen').style.display = 'block';
         }
 
         function sendDataToServer(dataObj) {
