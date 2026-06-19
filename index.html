@@ -12,17 +12,17 @@
 
         .btn-start { background: #64b5f6; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 15px; }
         .btn-start:hover { background: #42a5f5; }
-        .btn-finish { background: #43a047; color: white; border: none; padding: 12px 30px; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); margin-top: 10px; }
+        .btn-finish { background: #43a047; color: white; border: none; padding: 8px 25px; font-size: 15px; font-weight: bold; border-radius: 5px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
         .btn-finish:hover { background: #2e7d32; }
         .btn-finish:disabled { background: #6c757d; cursor: not-allowed; box-shadow: none; }
 
         #workspace { display: none; flex-direction: column; width: 100vw; height: 100vh; }
         #test-frame { flex-grow: 1; width: 100%; border: none; }
 
-        .bottom-bar { padding: 15px; background: #2f3a40; display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; color: #fff; box-sizing: border-box; gap: 10px; }
-        .checkbox-container { display: flex; align-items: center; gap: 10px; font-size: 15px; cursor: pointer; }
-        .checkbox-container input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; margin: 0; }
-        .status-line { font-size: 14px; color: #dff3ff; }
+        /* Обновленный тонкий нижний бар */
+        .bottom-bar { padding: 10px 15px; background: #2f3a40; display: flex; flex-direction: row; justify-content: center; align-items: center; width: 100%; color: #fff; box-sizing: border-box; gap: 20px; flex-wrap: wrap; }
+        .checkbox-container { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; margin: 0; }
+        .checkbox-container input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; margin: 0; }
 
         video { display: none; }
         #thanks-screen { display: none; text-align: center; margin: auto; }
@@ -37,7 +37,7 @@
         <input type="text" id="cand-name" placeholder="Имя" required>
         <input type="text" id="cand-surname" placeholder="Фамилия" required>
         <input type="tel" id="cand-phone" placeholder="Номер телефона" required>
-        <input type="email" id="cand-email" placeholder="Ваш Google Email" required>
+        <input type="email" id="cand-email" placeholder="Ваш Email" required>
         <input type="text" id="cand-position" placeholder="Должность" required>
         
         <button class="btn-start" id="btn-start" onclick="startTest()">Начать тестирование</button>
@@ -46,10 +46,9 @@
     <div id="workspace">
         <iframe id="test-frame"></iframe>
         <div class="bottom-bar">
-            <div class="status-line" id="status-line">В процессе...</div>
             <label class="checkbox-container">
                 <input type="checkbox" id="confirm-submit" onchange="toggleFinishButton()">
-                Я подтверждаю, что нажал(а) кнопку «Отправить» в Google Форме
+                Я нажал(а) кнопку «Отправить» в Google Форме
             </label>
             <button class="btn-finish" id="finish-btn" onclick="finishTestManual()" disabled>Завершить тестирование</button>
         </div>
@@ -65,9 +64,8 @@
 
     <script>
         // === ВСТАВЬТЕ СЮДА ВАШИ ССЫЛКИ ===
-        const APP_SCRIPT_URL = "https://script.google.com/macros/s/ВАШ_ID/exec"; 
+        const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxZNkg6JFUnqSpREklgX2jkIINCze4TaHe6JL5aUEsw-34yoAGl7H33z_kvFu7qR3e-dg/exec"; 
         const FORM_BASE_URL = "https://docs.google.com/forms/d/e/1FAIpQLSeY7m87iwRWwJofpYjT4QGf05SlRmX5vvh82qctT0WgJFnp4w/viewform";
-        // EMAIL_ENTRY_ID УДАЛЕН
         // ===================================
 
         let candidateData = {};
@@ -75,7 +73,6 @@
         let streamInstance = null;
         let isFinished = false; 
 
-        // Session Recovery variables
         let cheatCount = parseInt(sessionStorage.getItem('testCheats')) || 0;
 
         window.onload = function() {
@@ -124,7 +121,6 @@
                 document.getElementById('workspace').style.display = 'flex';
 
                 const iframe = document.getElementById('test-frame');
-                // ОБНОВЛЕНО: Загружаем форму без автозаполнения почты
                 iframe.src = FORM_BASE_URL;
 
                 if (!candidateData.startMs) {
