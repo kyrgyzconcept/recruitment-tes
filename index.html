@@ -19,7 +19,7 @@
         #workspace { display: none; flex-direction: column; width: 100vw; height: 100vh; }
         #test-frame { flex-grow: 1; width: 100%; border: none; }
 
-        /* Тонкий нижний бар */
+        /* Компактный нижний бар */
         .bottom-bar { padding: 10px 15px; background: #2f3a40; display: flex; flex-direction: row; justify-content: center; align-items: center; width: 100%; color: #fff; box-sizing: border-box; gap: 20px; flex-wrap: wrap; }
         .checkbox-container { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; margin: 0; }
         .checkbox-container input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; margin: 0; }
@@ -66,15 +66,18 @@
         // === ВСТАВЬТЕ СЮДА ВАШИ ССЫЛКИ ===
         const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxZNkg6JFUnqSpREklgX2jkIINCze4TaHe6JL5aUEsw-34yoAGl7H33z_kvFu7qR3e-dg/exec"; 
         const FORM_BASE_URL = "https://docs.google.com/forms/d/e/1FAIpQLSeY7m87iwRWwJofpYjT4QGf05SlRmX5vvh82qctT0WgJFnp4w/viewform";
-        const EMAIL_ENTRY_ID = "512214351"; // Например: "12345678"
+        const EMAIL_ENTRY_ID = "512214351"; // ID вашего вопроса Email, например: "12345678"
         // ===================================
 
         let candidateData = {};
         let startTime, timerInterval, photoInterval;
         let streamInstance = null;
         let isFinished = false; 
-
         let cheatCount = parseInt(sessionStorage.getItem('testCheats')) || 0;
+
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
 
         window.onload = function() {
             if (sessionStorage.getItem('testFinished') === 'true') {
@@ -91,7 +94,6 @@
                 document.getElementById('cand-phone').value = candidateData.phone || '';
                 document.getElementById('cand-email').value = candidateData.email || '';
                 document.getElementById('cand-position').value = candidateData.position || '';
-                alert("Обнаружено прерванное тестирование. Ваши данные сохранены. Нажмите 'Начать тестирование', чтобы подключить камеру и продолжить.");
             }
         };
 
@@ -110,7 +112,6 @@
                 return alert("Пожалуйста, заполните все поля.");
             }
 
-            // Проверка телефона: оставляем только цифры и проверяем длину
             let digitsOnly = candidateData.phone.replace(/\D/g, '');
             if (digitsOnly.length < 9) {
                 return alert("Номер телефона должен содержать минимум 9 цифр.");
@@ -128,7 +129,7 @@
                 document.getElementById('workspace').style.display = 'flex';
 
                 const iframe = document.getElementById('test-frame');
-                // Автоматическое заполнение email через параметр entry
+                // Передача Email в форму
                 iframe.src = FORM_BASE_URL + "?entry." + EMAIL_ENTRY_ID + "=" + encodeURIComponent(candidateData.email);
 
                 if (!candidateData.startMs) {
@@ -152,7 +153,14 @@
                 });
 
                 timerInterval = setInterval(updateTimeAndSend, 60000);
-                scheduleNextPhoto();
+                
+                // ЛОГИКА ФОТО: Первое фото через 5 секунд, затем цикл 45-90 секунд
+                setTimeout(() => {
+                    if (!isFinished) {
+                        takeAndSendPhoto();
+                        scheduleNextPhoto();
+                    }
+                }, 5000);
 
                 document.addEventListener('visibilitychange', handleVisibilityChange);
                 window.addEventListener('pagehide', handlePageHide);
@@ -182,6 +190,7 @@
 
         function scheduleNextPhoto() {
             if (isFinished) return;
+            // Случайное время от 45 сек (45000 мс) до 90 сек (90000 мс)
             const randomTime = Math.floor(Math.random() * (90000 - 45000 + 1)) + 45000;
             photoInterval = setTimeout(() => {
                 takeAndSendPhoto();
