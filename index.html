@@ -8,7 +8,7 @@
         body { font-family: 'Segoe UI', sans-serif; background-color: #f8f9fa; display: flex; flex-direction: column; height: 100vh; margin: 0; overflow: hidden; }
         .container { background: #fff; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; margin: auto; border-top: 5px solid #64b5f6; }
         h2 { color: #1e88e5; margin-bottom: 20px; }
-        input[type="text"], input[type="tel"], input[type="email"] { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; }
+        input[type="text"], input[type="tel"], input[type="email"] { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; box-sizing: border-box; }
 
         /* Кнопки */
         .btn-start { background: #64b5f6; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 15px; }
@@ -25,11 +25,7 @@
         .bottom-bar { padding: 15px; background: #2f3a40; display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; color: #fff; box-sizing: border-box; gap: 10px; }
         .checkbox-container { display: flex; align-items: center; gap: 10px; font-size: 15px; cursor: pointer; }
         .checkbox-container input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; margin: 0; }
-
-        .status-line {
-            font-size: 14px;
-            color: #dff3ff;
-        }
+        .status-line { font-size: 14px; color: #dff3ff; }
 
         video { display: none; }
         #thanks-screen { display: none; text-align: center; margin: auto; }
@@ -40,18 +36,20 @@
     <div class="container" id="reg-screen">
         <h2>Регистрация кандидата</h2>
         <p style="font-size: 14px; color: #666;">Пожалуйста, заполните данные перед началом теста. Убедитесь, что камера работает.</p>
+        
         <input type="text" id="cand-name" placeholder="Имя" required>
         <input type="text" id="cand-surname" placeholder="Фамилия" required>
         <input type="tel" id="cand-phone" placeholder="Номер телефона" required>
         <input type="email" id="cand-email" placeholder="Email" required>
         <input type="text" id="cand-position" placeholder="Должность" required>
-        <button class="btn-start" onclick="startTest()">Начать тестирование</button>
+        
+        <button class="btn-start" id="btn-start" onclick="startTest()">Начать тестирование</button>
     </div>
 
     <div id="workspace">
         <iframe id="test-frame"></iframe>
         <div class="bottom-bar">
-            <div class="status-line" id="status-line">Ждем ответа...</div>
+            <div class="status-line" id="status-line">В процессе...</div>
             <label class="checkbox-container">
                 <input type="checkbox" id="confirm-submit" onchange="toggleFinishButton()">
                 Я подтверждаю, что нажал(а) кнопку «Отправить» в Google Форме
@@ -69,16 +67,11 @@
     <canvas id="canvas" style="display:none;"></canvas>
 
     <script>
-        // =================================================================
-        // ОШИБКА БЫЛА ЗДЕСЬ: убрана лишняя буква "В" в начале ссылки
+        // === ВСТАВЬТЕ СЮДА ВАШИ ССЫЛКИ ===
         const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzLD7Bfba_vzMm6tlm27T_bhAi7R5mrAGe-HhBYCysvoN-oy5EULQTKqKF6qtluuscp7w/exec";
-
-        // ВАЖНО: Вставьте сюда ДЛИННУЮ ссылку. forms.gle работать НЕ БУДЕТ!
-        // Пример: "https://docs.google.com/forms/d/e/ВАШ_ДЛИННЫЙ_ИДЕНТИФИКАТОР/viewform"
         const FORM_BASE_URL = "https://docs.google.com/forms/d/e/1FAIpQLSeY7m87iwRWwJofpYjT4QGf05SlRmX5vvh82qctT0WgJFnp4w/viewform";
-
         const EMAIL_ENTRY_ID = "entry.512214351";
-        // =================================================================
+        // ===================================
 
         let candidateData = {};
         let startTime, timerInterval, photoInterval;
@@ -88,11 +81,8 @@
         const canvas = document.getElementById('canvas');
         const context = canvas.getContext('2d');
 
-        // Управление доступностью кнопки финиша
         function toggleFinishButton() {
-            const checkbox = document.getElementById('confirm-submit');
-            const btn = document.getElementById('finish-btn');
-            btn.disabled = !checkbox.checked;
+            document.getElementById('finish-btn').disabled = !document.getElementById('confirm-submit').checked;
         }
 
         function setStatus(text) {
@@ -110,9 +100,12 @@
             };
 
             if (!candidateData.name || !candidateData.surname || !candidateData.email) {
-                alert("Пожалуйста, заполните Имя, Фамилию и Email.");
-                return;
+                return alert("Пожалуйста, заполните Имя, Фамилию и Email.");
             }
+
+            const btnStart = document.getElementById('btn-start');
+            btnStart.innerText = "Подключение...";
+            btnStart.disabled = true;
 
             try {
                 streamInstance = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -127,8 +120,6 @@
                 let now = new Date();
                 candidateData.startTime = now.toLocaleString("ru-RU");
                 candidateData.startMs = now.getTime();
-
-                setStatus("Ждем ответа...");
 
                 sendDataToServer({
                     type: "result",
@@ -160,6 +151,8 @@
 
             } catch (err) {
                 alert("Для прохождения теста необходим доступ к камере.");
+                btnStart.innerText = "Начать тестирование";
+                btnStart.disabled = false;
             }
         }
 
