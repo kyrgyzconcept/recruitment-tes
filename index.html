@@ -19,7 +19,7 @@
         #workspace { display: none; flex-direction: column; width: 100vw; height: 100vh; }
         #test-frame { flex-grow: 1; width: 100%; border: none; }
 
-        /* Обновленный тонкий нижний бар */
+        /* Тонкий нижний бар */
         .bottom-bar { padding: 10px 15px; background: #2f3a40; display: flex; flex-direction: row; justify-content: center; align-items: center; width: 100%; color: #fff; box-sizing: border-box; gap: 20px; flex-wrap: wrap; }
         .checkbox-container { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; margin: 0; }
         .checkbox-container input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; margin: 0; }
@@ -66,6 +66,7 @@
         // === ВСТАВЬТЕ СЮДА ВАШИ ССЫЛКИ ===
         const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxZNkg6JFUnqSpREklgX2jkIINCze4TaHe6JL5aUEsw-34yoAGl7H33z_kvFu7qR3e-dg/exec"; 
         const FORM_BASE_URL = "https://docs.google.com/forms/d/e/1FAIpQLSeY7m87iwRWwJofpYjT4QGf05SlRmX5vvh82qctT0WgJFnp4w/viewform";
+        const EMAIL_ENTRY_ID = "512214351"; // Например: "12345678"
         // ===================================
 
         let candidateData = {};
@@ -105,8 +106,14 @@
             candidateData.email = document.getElementById('cand-email').value.trim();
             candidateData.position = document.getElementById('cand-position').value.trim();
 
-            if (!candidateData.name || !candidateData.surname || !candidateData.email) {
-                return alert("Пожалуйста, заполните Имя, Фамилию и Email.");
+            if (!candidateData.name || !candidateData.surname || !candidateData.email || !candidateData.phone) {
+                return alert("Пожалуйста, заполните все поля.");
+            }
+
+            // Проверка телефона: оставляем только цифры и проверяем длину
+            let digitsOnly = candidateData.phone.replace(/\D/g, '');
+            if (digitsOnly.length < 9) {
+                return alert("Номер телефона должен содержать минимум 9 цифр.");
             }
 
             const btnStart = document.getElementById('btn-start');
@@ -121,7 +128,8 @@
                 document.getElementById('workspace').style.display = 'flex';
 
                 const iframe = document.getElementById('test-frame');
-                iframe.src = FORM_BASE_URL;
+                // Автоматическое заполнение email через параметр entry
+                iframe.src = FORM_BASE_URL + "?entry." + EMAIL_ENTRY_ID + "=" + encodeURIComponent(candidateData.email);
 
                 if (!candidateData.startMs) {
                     let now = new Date();
