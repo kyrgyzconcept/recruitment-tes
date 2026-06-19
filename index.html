@@ -10,18 +10,15 @@
         h2 { color: #1e88e5; margin-bottom: 20px; }
         input[type="text"], input[type="tel"], input[type="email"] { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; box-sizing: border-box; }
 
-        /* Кнопки */
         .btn-start { background: #64b5f6; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 15px; }
         .btn-start:hover { background: #42a5f5; }
         .btn-finish { background: #43a047; color: white; border: none; padding: 12px 30px; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); margin-top: 10px; }
         .btn-finish:hover { background: #2e7d32; }
         .btn-finish:disabled { background: #6c757d; cursor: not-allowed; box-shadow: none; }
 
-        /* Ифрейм рабочего пространства */
         #workspace { display: none; flex-direction: column; width: 100vw; height: 100vh; }
         #test-frame { flex-grow: 1; width: 100%; border: none; }
 
-        /* Нижняя панель */
         .bottom-bar { padding: 15px; background: #2f3a40; display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; color: #fff; box-sizing: border-box; gap: 10px; }
         .checkbox-container { display: flex; align-items: center; gap: 10px; font-size: 15px; cursor: pointer; }
         .checkbox-container input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; margin: 0; }
@@ -68,7 +65,7 @@
 
     <script>
         // === ВСТАВЬТЕ СЮДА ВАШИ ССЫЛКИ ===
-        const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzLD7Bfba_vzMm6tlm27T_bhAi7R5mrAGe-HhBYCysvoN-oy5EULQTKqKF6qtluuscp7w/exec";
+        const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzLD7Bfba_vzMm6tlm27T_bhAi7R5mrAGe-HhBYCysvoN-oy5EULQTKqKF6qtluuscp7w/exec"; 
         const FORM_BASE_URL = "https://docs.google.com/forms/d/e/1FAIpQLSeY7m87iwRWwJofpYjT4QGf05SlRmX5vvh82qctT0WgJFnp4w/viewform";
         const EMAIL_ENTRY_ID = "entry.512214351";
         // ===================================
@@ -77,6 +74,8 @@
         let startTime, timerInterval, photoInterval;
         let cheatCount = 0;
         let streamInstance = null;
+        let isFinished = false; // Kill-switch flag for finished tests
+
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const context = canvas.getContext('2d');
@@ -136,17 +135,21 @@
                 timerInterval = setInterval(updateTimeAndSend, 60000);
                 scheduleNextPhoto();
 
+                // Cheating check: only fire if the test is NOT finished
                 document.addEventListener('visibilitychange', () => {
-                    if (document.hidden) {
+                    if (document.hidden && !isFinished) {
                         cheatCount++;
                         updateTimeAndSend();
                         alert("Внимание! Покидать вкладку тестирования запрещено. Нарушение зафиксировано.");
                     }
                 });
 
+                // Tab closed check: only send 'close' payload if test is NOT finished
                 window.addEventListener('pagehide', () => {
-                    const payload = JSON.stringify({ type: "close", email: candidateData.email });
-                    navigator.sendBeacon(APP_SCRIPT_URL, payload);
+                    if (!isFinished) {
+                        const payload = JSON.stringify({ type: "close", email: candidateData.email });
+                        navigator.sendBeacon(APP_SCRIPT_URL, payload);
+                    }
                 });
 
             } catch (err) {
@@ -157,7 +160,10 @@
         }
 
         function scheduleNextPhoto() {
-            const randomTime = Math.floor(Math.random() * (300000 - 180000 + 1)) + 180000;
+            if (isFinished) return; // Stop taking photos if finished
+            
+            // Random time between 45 seconds (45000ms) and 90 seconds (90000ms)
+            const randomTime = Math.floor(Math.random() * (90000 - 45000 + 1)) + 45000;
             photoInterval = setTimeout(() => {
                 takeAndSendPhoto();
                 scheduleNextPhoto();
@@ -165,11 +171,15 @@
         }
 
         function takeAndSendPhoto() {
-            if (!streamInstance) return;
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
+            if (!streamInstance || isFinished) return;
+            
+            const MAX_WIDTH = 640;
+            const scale = Math.min(MAX_WIDTH / video.videoWidth, 1);
+            canvas.width = video.videoWidth * scale;
+            canvas.height = video.videoHeight * scale;
+            
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const imageData = canvas.toDataURL('image/jpeg', 0.5);
+            const imageData = canvas.toDataURL('image/jpeg', 0.4);
 
             sendDataToServer({
                 type: "photo",
@@ -181,6 +191,7 @@
         }
 
         function updateTimeAndSend() {
+            if (isFinished) return;
             let currentMs = new Date().getTime();
             let minutesPassed = Math.floor((currentMs - candidateData.startMs) / 60000);
 
@@ -196,6 +207,7 @@
         function finishTestManual() {
             if(!confirm("Вы уверены, что хотите завершить тест? Камера будет отключена.")) return;
 
+            isFinished = true; // Engage kill-switch
             clearInterval(timerInterval);
             clearTimeout(photoInterval);
 
@@ -222,7 +234,7 @@
             fetch(APP_SCRIPT_URL, {
                 method: 'POST',
                 mode: 'no-cors',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }, 
                 body: JSON.stringify(dataObj)
             }).catch(e => console.error(e));
         }
