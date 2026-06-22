@@ -7,7 +7,8 @@
     <style>
         body { font-family: 'Segoe UI', sans-serif; background-color: #f8f9fa; display: flex; flex-direction: column; height: 100vh; margin: 0; overflow: hidden; }
         .container { background: #fff; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; margin: auto; border-top: 5px solid #64b5f6; }
-        h2 { color: #1e88e5; margin-bottom: 20px; }
+        h2 { color: #1e88e5; margin-bottom: 15px; }
+        .warning-text { font-size: 14px; color: #d32f2f; font-weight: 500; margin-bottom: 20px; background: #ffebee; padding: 10px; border-radius: 5px; border: 1px solid #ffcdd2; }
         input[type="text"], input[type="tel"], input[type="email"] { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; box-sizing: border-box; }
 
         .btn-start { background: #64b5f6; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 15px; }
@@ -31,7 +32,7 @@
 
     <div class="container" id="reg-screen">
         <h2>Регистрация кандидата</h2>
-        <p style="font-size: 14px; color: #666;">Пожалуйста, заполните данные перед началом теста. Убедитесь, что камера работает.</p>
+        <div class="warning-text">Пожалуйста, заполните все данные ниже, иначе ваши результаты не будут учтены. Убедитесь, что камера работает.</div>
         
         <input type="text" id="cand-name" placeholder="Имя" required>
         <input type="text" id="cand-surname" placeholder="Фамилия" required>
@@ -105,10 +106,18 @@
             candidateData.email = document.getElementById('cand-email').value.trim();
             candidateData.position = document.getElementById('cand-position').value.trim();
 
-            if (!candidateData.name || !candidateData.surname || !candidateData.email || !candidateData.phone) {
-                return alert("Пожалуйста, заполните все поля.");
+            // 1. Проверка на пустые поля
+            if (!candidateData.name || !candidateData.surname || !candidateData.phone || !candidateData.email || !candidateData.position) {
+                return alert("Пожалуйста, заполните все поля. Ни одна строка не должна быть пустой.");
             }
 
+            // 2. Проверка валидности Email (наличие @ и домена)
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(candidateData.email)) {
+                return alert("Пожалуйста, введите корректный адрес электронной почты, содержащий символ '@'.");
+            }
+
+            // 3. Проверка номера телефона (минимум 9 цифр)
             let digitsOnly = candidateData.phone.replace(/\D/g, '');
             if (digitsOnly.length < 9) {
                 return alert("Номер телефона должен содержать минимум 9 цифр.");
@@ -193,7 +202,7 @@
 
         function takeAndSendPhoto() {
             if (!streamInstance || isFinished) return;
-            if (video.videoWidth === 0 || video.videoHeight === 0) return; // Защита от пустых кадров
+            if (video.videoWidth === 0 || video.videoHeight === 0) return; 
             
             const MAX_WIDTH = 640;
             const scale = Math.min(MAX_WIDTH / video.videoWidth, 1);
@@ -258,7 +267,6 @@
         }
 
         function sendDataToServer(dataObj) {
-            // Использование URLSearchParams гарантирует, что данные не потеряются при CORS-редиректах
             const formData = new URLSearchParams();
             formData.append("data", JSON.stringify(dataObj));
 
