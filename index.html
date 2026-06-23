@@ -106,18 +106,15 @@
             candidateData.email = document.getElementById('cand-email').value.trim();
             candidateData.position = document.getElementById('cand-position').value.trim();
 
-            // 1. Проверка на пустые поля
             if (!candidateData.name || !candidateData.surname || !candidateData.phone || !candidateData.email || !candidateData.position) {
                 return alert("Пожалуйста, заполните все поля. Ни одна строка не должна быть пустой.");
             }
 
-            // 2. Проверка валидности Email (наличие @ и домена)
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailRegex.test(candidateData.email)) {
                 return alert("Пожалуйста, введите корректный адрес электронной почты, содержащий символ '@'.");
             }
 
-            // 3. Проверка номера телефона (минимум 9 цифр)
             let digitsOnly = candidateData.phone.replace(/\D/g, '');
             if (digitsOnly.length < 9) {
                 return alert("Номер телефона должен содержать минимум 9 цифр.");
@@ -187,7 +184,8 @@
 
         function handlePageHide() {
             if (!isFinished) {
-                sendDataToServer({ type: "close", email: candidateData.email });
+                // FIX 2: Send 'true' to activate keepalive flag on tab close
+                sendDataToServer({ type: "close", email: candidateData.email }, true);
             }
         }
 
@@ -266,13 +264,15 @@
             document.getElementById('thanks-screen').style.display = 'block';
         }
 
-        function sendDataToServer(dataObj) {
+        // FIX 2 (continued): Added isClosing parameter to ensure signal sends as tab dies
+        function sendDataToServer(dataObj, isClosing = false) {
             const formData = new URLSearchParams();
             formData.append("data", JSON.stringify(dataObj));
 
             fetch(APP_SCRIPT_URL, {
                 method: 'POST',
-                body: formData
+                body: formData,
+                keepalive: isClosing 
             }).catch(e => console.error("Ошибка отправки:", e));
         }
     </script>
