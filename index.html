@@ -99,6 +99,33 @@
             document.getElementById('finish-btn').disabled = !document.getElementById('confirm-submit').checked;
         }
 
+        // --- NEW DATA SENDER (FIX FOR RACE CONDITIONS) ---
+        // Automatically injects core candidate data into EVERY request
+        function sendDataToServer(dataObj, isClosing = false) {
+            if (candidateData.email) {
+                dataObj.name = dataObj.name || candidateData.name;
+                dataObj.surname = dataObj.surname || candidateData.surname;
+                dataObj.phone = dataObj.phone || candidateData.phone;
+                dataObj.email = dataObj.email || candidateData.email;
+                dataObj.position = dataObj.position || candidateData.position;
+                dataObj.startTime = dataObj.startTime || candidateData.startTime;
+            }
+
+            if (candidateData.startMs) {
+                let currentMs = new Date().getTime();
+                dataObj.time = Math.floor((currentMs - candidateData.startMs) / 60000);
+            }
+
+            const formData = new URLSearchParams();
+            formData.append("data", JSON.stringify(dataObj));
+
+            fetch(APP_SCRIPT_URL, {
+                method: 'POST',
+                body: formData,
+                keepalive: isClosing 
+            }).catch(e => console.error("Ошибка отправки:", e));
+        }
+
         async function startTest() {
             candidateData.name = document.getElementById('cand-name').value.trim();
             candidateData.surname = document.getElementById('cand-surname').value.trim();
@@ -144,13 +171,6 @@
 
                 sendDataToServer({
                     type: "result",
-                    name: candidateData.name,
-                    surname: candidateData.surname,
-                    phone: candidateData.phone,
-                    email: candidateData.email,
-                    position: candidateData.position,
-                    startTime: candidateData.startTime,
-                    time: Math.floor((new Date().getTime() - candidateData.startMs) / 60000),
                     cheats: cheatCount
                 });
 
@@ -164,7 +184,6 @@
                 }, 5000);
 
                 document.addEventListener('visibilitychange', handleVisibilityChange);
-                window.addEventListener('pagehide', handlePageHide);
 
             } catch (err) {
                 alert("Для прохождения теста необходим доступ к камере.");
@@ -182,12 +201,16 @@
             }
         }
 
-        function handlePageHide() {
-            if (!isFinished) {
-                // FIX 2: Send 'true' to activate keepalive flag on tab close
-                sendDataToServer({ type: "close", email: candidateData.email }, true);
-            }
-        }
+        // --- TRIPLE REDUNDANCY TAB CLOSE DETECTION ---
+        window.addEventListener('pagehide', function(e) {
+            if (!isFinished) sendDataToServer({ type: "close" }, true);
+        });
+        window.addEventListener('beforeunload', function(e) {
+            if (!isFinished) sendDataToServer({ type: "close" }, true);
+        });
+        window.addEventListener('unload', function(e) {
+            if (!isFinished) sendDataToServer({ type: "close" }, true);
+        });
 
         function scheduleNextPhoto() {
             if (isFinished) return;
@@ -212,23 +235,14 @@
 
             sendDataToServer({
                 type: "photo",
-                name: candidateData.name,
-                surname: candidateData.surname,
-                email: candidateData.email,
                 image: imageData
             });
         }
 
         function updateTimeAndSend() {
             if (isFinished) return;
-            let currentMs = new Date().getTime();
-            let minutesPassed = Math.floor((currentMs - candidateData.startMs) / 60000);
-
             sendDataToServer({
                 type: "result",
-                email: candidateData.email,
-                startTime: candidateData.startTime,
-                time: minutesPassed,
                 cheats: cheatCount
             });
         }
@@ -243,37 +257,18 @@
             clearTimeout(photoInterval);
 
             document.removeEventListener('visibilitychange', handleVisibilityChange);
-            window.removeEventListener('pagehide', handlePageHide);
 
             if (streamInstance) {
                 streamInstance.getTracks().forEach(track => track.stop());
             }
 
-            let currentMs = new Date().getTime();
-            let minutesPassed = Math.floor((currentMs - candidateData.startMs) / 60000);
-
             sendDataToServer({
                 type: "final_click",
-                email: candidateData.email,
-                startTime: candidateData.startTime,
-                time: minutesPassed,
                 cheats: cheatCount
             });
 
             document.getElementById('workspace').style.display = 'none';
             document.getElementById('thanks-screen').style.display = 'block';
-        }
-
-        // FIX 2 (continued): Added isClosing parameter to ensure signal sends as tab dies
-        function sendDataToServer(dataObj, isClosing = false) {
-            const formData = new URLSearchParams();
-            formData.append("data", JSON.stringify(dataObj));
-
-            fetch(APP_SCRIPT_URL, {
-                method: 'POST',
-                body: formData,
-                keepalive: isClosing 
-            }).catch(e => console.error("Ошибка отправки:", e));
         }
     </script>
 </body>
