@@ -114,7 +114,6 @@
                 let currentMs = new Date().getTime();
                 let calcTime = Math.floor((currentMs - candidateData.startMs) / 60000);
                 
-                // FRONTEND SANITY CHECK: If calculation shows over 24 hours (glitched clock or shared laptop bleed), reset it.
                 if (calcTime < 0 || calcTime > 1440) {
                     candidateData.startMs = currentMs;
                     calcTime = 0;
@@ -135,8 +134,6 @@
         async function startTest() {
             let enteredEmail = document.getElementById('cand-email').value.trim();
             
-            // PREVENT SHARED LAPTOP DATA BLEED
-            // If HR left the tab open from the last candidate, wipe the slate clean for the new one.
             if (candidateData.email && candidateData.email !== enteredEmail) {
                 candidateData = {}; 
                 sessionStorage.removeItem('testData');
