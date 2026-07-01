@@ -86,12 +86,13 @@
 
             let savedData = sessionStorage.getItem('testData');
             if (savedData) {
-                candidateData = JSON.parse(savedData);
-                document.getElementById('cand-name').value = candidateData.name || '';
-                document.getElementById('cand-surname').value = candidateData.surname || '';
-                document.getElementById('cand-phone').value = candidateData.phone || '';
-                document.getElementById('cand-email').value = candidateData.email || '';
-                document.getElementById('cand-position').value = candidateData.position || '';
+                let parsed = JSON.parse(savedData);
+                document.getElementById('cand-name').value = parsed.name || '';
+                document.getElementById('cand-surname').value = parsed.surname || '';
+                document.getElementById('cand-phone').value = parsed.phone || '';
+                document.getElementById('cand-email').value = parsed.email || '';
+                document.getElementById('cand-position').value = parsed.position || '';
+                candidateData = parsed; 
             }
         };
 
@@ -111,7 +112,14 @@
 
             if (candidateData.startMs) {
                 let currentMs = new Date().getTime();
-                dataObj.time = Math.floor((currentMs - candidateData.startMs) / 60000);
+                let calcTime = Math.floor((currentMs - candidateData.startMs) / 60000);
+                
+                // FRONTEND SANITY CHECK: If calculation shows over 24 hours (glitched clock or shared laptop bleed), reset it.
+                if (calcTime < 0 || calcTime > 1440) {
+                    candidateData.startMs = currentMs;
+                    calcTime = 0;
+                }
+                dataObj.time = calcTime;
             }
 
             const formData = new URLSearchParams();
@@ -125,10 +133,21 @@
         }
 
         async function startTest() {
+            let enteredEmail = document.getElementById('cand-email').value.trim();
+            
+            // PREVENT SHARED LAPTOP DATA BLEED
+            // If HR left the tab open from the last candidate, wipe the slate clean for the new one.
+            if (candidateData.email && candidateData.email !== enteredEmail) {
+                candidateData = {}; 
+                sessionStorage.removeItem('testData');
+                sessionStorage.removeItem('testCheats');
+                cheatCount = 0;
+            }
+            
             candidateData.name = document.getElementById('cand-name').value.trim();
             candidateData.surname = document.getElementById('cand-surname').value.trim();
             candidateData.phone = document.getElementById('cand-phone').value.trim();
-            candidateData.email = document.getElementById('cand-email').value.trim();
+            candidateData.email = enteredEmail;
             candidateData.position = document.getElementById('cand-position').value.trim();
 
             if (!candidateData.name || !candidateData.surname || !candidateData.phone || !candidateData.email || !candidateData.position) {
