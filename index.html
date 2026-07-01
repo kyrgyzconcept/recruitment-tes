@@ -36,7 +36,7 @@
         
         <input type="text" id="cand-name" placeholder="Имя" required>
         <input type="text" id="cand-surname" placeholder="Фамилия" required>
-        <input type="tel" id="cand-phone" placeholder="Номер телефона" required>
+        <input type="tel" id="cand-phone" placeholder="Номер WhatsApp" required>
         <input type="email" id="cand-email" placeholder="Ваш Email" required>
         <input type="text" id="cand-position" placeholder="Должность" required>
         
@@ -99,8 +99,6 @@
             document.getElementById('finish-btn').disabled = !document.getElementById('confirm-submit').checked;
         }
 
-        // --- NEW DATA SENDER (FIX FOR RACE CONDITIONS) ---
-        // Automatically injects core candidate data into EVERY request
         function sendDataToServer(dataObj, isClosing = false) {
             if (candidateData.email) {
                 dataObj.name = dataObj.name || candidateData.name;
@@ -144,7 +142,7 @@
 
             let digitsOnly = candidateData.phone.replace(/\D/g, '');
             if (digitsOnly.length < 9) {
-                return alert("Номер телефона должен содержать минимум 9 цифр.");
+                return alert("Номер WhatsApp должен содержать минимум 9 цифр.");
             }
 
             const btnStart = document.getElementById('btn-start');
@@ -201,7 +199,6 @@
             }
         }
 
-        // --- TRIPLE REDUNDANCY TAB CLOSE DETECTION ---
         window.addEventListener('pagehide', function(e) {
             if (!isFinished) sendDataToServer({ type: "close" }, true);
         });
